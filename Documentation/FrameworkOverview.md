@@ -8,6 +8,11 @@ learning about new modules and finding more specific documentation.
 For examples and help understanding how to use RAC, see the [README][] or
 the [Design Guidelines][].
 
+这篇文档是描述有关 ReactiveCocoa 框架中一些高水准的组件，并且阐释它们是如何相互组合一起工作和它们各自的责任。这意味着你需要找一些特别的资料来学习和研究这个新的编程模式。
+
+更多资料，请看 [README][] 
+和 [Design Guidelines][].
+
 ## Streams
 
 A **stream**, represented by the [RACStream][] abstract class, is any series of
@@ -24,6 +29,14 @@ implements the equivalent of the [Monoid][] and [MonadZip][] typeclasses from
 
 [RACStream][] isn't terribly useful on its own. Most streams are treated as
 [signals](#signals) or [sequences](#sequences) instead.
+
+## Streams
+Stream， 它的抽象代表类是RACStream，是一些列的对象值。
+它的值在通过顺序检查之后，可以立刻生效或者在未来的当你需要它的时候才生效。在值得传递过程中，你没有办法越级操作。在第一个值没有验证完成的时候，你是没有办法拿到第二个值的。
+
+Streams 是一个单体。除此之外，它还可以通过一些基本的语句来进行一些复杂度很高的操作。RACStream 可以理解为等价于 Haskell 里面的Monoid 和 MonadZip。
+
+RACStream 不是一个常用的东西，本身的使用意义也不很大，一般会以signals或者sequences等这些更高层次的表现形态代替。
 
 ## Signals
 
@@ -51,6 +64,25 @@ Signals send three different types of events to their subscribers:
 The lifetime of a signal consists of any number of `next` events, followed by
 one `error` or `completed` event (but not both).
 
+## Signals
+Signal,它的抽象代表类是RACSignal Class ，他是一个 push-driven Stream
+
+Signals 一般来说就是代表着数据，用来在app中各种数据的传输。推动程序去执行函数还是只是接受数据，这些的值都是通过订阅了这个的Signals来触发的。开发者想访问signal的数据必须先去订阅它。
+
+Signals 通过三种状态来告诉订阅者它的状态：
+
+* Next 状态是从Stream 生成一个新的值。 （RACStream 方法这能在这个状态下操作。）
+
+* Error 状态代表的是在这个Signal 出错了。（Error 状态包含着NSError 的对象，这样可以呈现给开发者看到底是哪里出错了。Error 不包含Stream's 的值，所以要特别的进行处理。）
+
+* Completed 状态代表着这个Signal已经成功的完成了。
+
+Signals 的整个生命周期可以理解成，有对个Next 发起一个Value，通过Error，和Completed来结束。（对于一个Signals 来说，Error和Completed 这能存在一个）。
+
+  
+
+
+
 ### Subscription
 
 A **subscriber** is anything that is waiting or capable of waiting for events
@@ -66,6 +98,14 @@ these intermediate subscriptions are usually an implementation detail.
 Subscriptions [retain their signals][Memory Management], and are automatically
 disposed of when the signal completes or errors. Subscriptions can also be
 [disposed of manually](#disposables).
+
+### Subscription
+Subscriber 它的所有功能就是响应一个Signals事件。只要是符合RACSubscriber 协议的，它可以代表任何的对象。
+
+它是由 [-subscribeNext:error:completed:][RACSignal] 或者其通过一个简单地函数就可以创建出来。从技术上讲，大多数 [RACStream][] 和
+[RACSignal][RACSignal+Operations] 的操作附带的都会创建一个Subscriptions的，但创建之后会立马执行。
+
+在操作的过程中，Subsciptios 会保持着它的Signals，同时当它的Signal 状态从Next 变成 Completes 或者 Error 这两个状态其中一个的时候，Subscriptions 也会自动的销毁。当然，你也可以手动的把它销毁。
 
 ### Subjects
 
@@ -85,6 +125,17 @@ Some subjects offer additional behaviors as well. In particular,
 [RACReplaySubject][] can be used to buffer events for future
 [subscribers](#subscription), like when a network request finishes before
 anything is ready to handle the result.
+
+### Subjects
+Subjects 的抽象类代表是RACSubject, 是一个可以手动操作的信号.
+
+Subjects 你可以理解成一个可以变化的Signal，跟OC 里面的`NSMutableArray` 是可变的， `NSArray`是不可变得概念相似。是绝好的Signals TO non-RAC code的连接器。
+
+举个例子来说：它可以处理应用程序逻辑块的回调，而不是简单地发送一个事件。它可以以一个RACSgnal 类型作为返回值来隐藏实现细节。
+
+Subjects 还可以提供一些额外的行为。例如 [RACReplaySubject][] 可以为未来的 Subscripbers 开辟一个缓存区。就像在发送一个网络请求的时候，在完成整个请求之前，这里会返回请求情况。
+
+
 
 ### Commands
 
